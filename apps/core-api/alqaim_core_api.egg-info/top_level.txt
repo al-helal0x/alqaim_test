@@ -1,4 +1,0 @@
-modules
-platform_core
-presentation
-shared_kernel
