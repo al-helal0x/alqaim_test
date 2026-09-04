@@ -1,2 +1,12 @@
 journey/ 
 plans/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+apps/core-api/var/
+node_modules/
+*.log
+core_api_ci_log.txt
+pos_app_ci_log.txt
