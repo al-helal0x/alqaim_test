@@ -1,0 +1,28 @@
+# يعتمد على npm workspaces (package.json في جذر المستودع، أُضيف عند ربط
+# packages/ui-kit وpackages/i18n فعلياً بـ apps/web — قبل ذلك كانت هذه
+# الحزم غير مستهلَكة فلم تكن المشكلة ظاهرة). Build Context هنا هو جذر
+# المستودع (راجع docker-compose.yml: services.web.build.context = ".").
+FROM node:20-slim AS base
+WORKDIR /app
+
+# NEXT_PUBLIC_API_URL يُضمَّن داخل حزمة web وقت البناء (Next.js لا يقرأ
+# NEXT_PUBLIC_* وقت التشغيل) — لازم لنشر Self-hosted (مهمة #3) حتى يشير
+# المتصفح فعلياً لعنوان core-api العام بدل "localhost" الافتراضي
+# (server-config.ts). القيمة تُمرَّر عبر build.args في docker-compose.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# نسخ ملفات package.json فقط أولاً (طبقة Cache منفصلة عن الكود المصدري)
+COPY package.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/api-types/package.json packages/api-types/package.json
+COPY packages/ui-kit/package.json packages/ui-kit/package.json
+COPY packages/i18n/package.json packages/i18n/package.json
+RUN npm install
+
+COPY apps/web apps/web
+COPY packages packages
+
+WORKDIR /app/apps/web
+RUN npm run build
+CMD ["npm", "start"]

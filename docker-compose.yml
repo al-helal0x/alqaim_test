@@ -1,0 +1,83 @@
+# بيئة التطوير المحلية (المرحلة 0 — القسم 16)
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: alqaim
+      POSTGRES_PASSWORD: alqaim
+      POSTGRES_DB: alqaim
+    ports: ["5433:5432"]  # ⚠️ 5433 على المضيف (بدل 5432) — تجنّب تعارض مع alqaim_postgres (مشروع آخر) الذي يحجز 5432 محلياً. الاتصال الداخلي core-api/ai-platform يبقى postgres:5432 كما هو، غير متأثر.
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+      - "./infra/docker/postgres-init:/docker-entrypoint-initdb.d:ro"
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: alqaim
+      MINIO_ROOT_PASSWORD: alqaim12345
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["minio_data:/data"]
+
+  core-api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.core-api
+    ports: ["8000:8000"]
+    depends_on: [postgres, redis, minio]
+    environment:
+      ALQAIM_DATABASE_URL: postgresql+asyncpg://alqaim:alqaim@postgres:5432/alqaim
+      ALQAIM_REDIS_URL: redis://redis:6379/0
+      # TASK-AI-04 (القسم 3.3، الخيار أ) — مصادقة خدمة-لخدمة لمسارات
+      # /internal/* التي يستهلكها ai-platform. قيمة تطوير ثابتة فقط (ليست
+      # للإنتاج) — يجب أن تطابق ALQAIM_AI_AI_PLATFORM_SERVICE_TOKEN أدناه
+      # عند ai-platform بالضبط.
+      # ⚠️ إصلاح (جلسة تحقّق GATE-05): نفس فئة الخلل بالضبط في المشكلة 3
+      # أعلاه (ai-platform→postgres) لكن بالاتجاه المعاكس هنا — core-api لم
+      # يكن يملك متغير بيئة لعنوان ai-platform إطلاقاً، فسقط على القيمة
+      # الافتراضية في config.py (ai_platform_base_url="http://localhost:8100")
+      # التي تعني حاوية core-api نفسها لا حاوية ai-platform → 503 دائماً من
+      # /ai/documents/analyze (الخطأ يُبتلَع ويُحوَّل لـ503 صراحة في
+      # ai_proxy_router.py._forward بدل تسريب Traceback، فبدا الخطأ غامضاً).
+      ALQAIM_AI_PLATFORM_BASE_URL: http://ai-platform:8100
+      ALQAIM_AI_PLATFORM_SERVICE_TOKEN: dev-only-service-token-change-me
+
+  ai-platform:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ai-platform
+    ports: ["8100:8100"]
+    depends_on: [redis]
+    environment:
+      # عنوان core-api داخل شبكة docker المحلية (اسم الخدمة)، ليس localhost.
+      # ⚠️ بادئة env_prefix="ALQAIM_AI_" في Settings تُضاعَف مع اسم الحقل
+      # نفسه (core_api_base_url / ai_platform_service_token) — الاسم الصحيح
+      # فعلياً هو ALQAIM_AI_CORE_API_BASE_URL وALQAIM_AI_AI_PLATFORM_SERVICE_TOKEN،
+      # وليس ALQAIM_CORE_API_BASE_URL كما قد يُفترَض للوهلة الأولى.
+      # ⚠️ إصلاح (جلسة تحقّق GATE-05): كان هذا المتغير غائباً تماماً هنا،
+      # فكان ai-platform يسقط على القيمة الافتراضية المكتوبة في config.py
+      # (postgresql+asyncpg://alqaim_ai:alqaim_ai@localhost:5433/alqaim_ai) —
+      # "localhost" داخل حاوية ai-platform تعني الحاوية نفسها، لا خدمة
+      # postgres، فيفشل الاتصال دائماً. قاعدة بيانات ai-platform مستقلة عمداً
+      # عن قاعدة core-api (القسم 8.5) — لذلك مستخدم/قاعدة مختلفان هنا، وليس
+      # نفس بيانات اتصال core-api. راجع infra/docker/postgres-init/ لسكربت
+      # إنشاء هذه القاعدة تلقائياً عند أول تشغيل بفوليوم جديد.
+      ALQAIM_AI_DATABASE_URL: postgresql+asyncpg://alqaim_ai:alqaim_ai@postgres:5432/alqaim_ai
+      ALQAIM_AI_CORE_API_BASE_URL: http://core-api:8000
+      ALQAIM_AI_AI_PLATFORM_SERVICE_TOKEN: dev-only-service-token-change-me
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    ports: ["3000:3000"]
+    depends_on: [core-api]
+
+volumes:
+  pgdata:
+  minio_data:

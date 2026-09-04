@@ -1,0 +1,15 @@
+{
+  "profile_id": "alameen_v9_mssql",
+  "source_type": "alameen_mssql",
+  "notes": "مثال هيكلي فقط — الأعمدة الفعلية غير مؤكَّدة بعد (راجع §2 من خطة الميزة: لا مرجع علني موثوق لبنية جداول الأمين). يُستبدَل بأول ملف حقيقي فور تنفيذ TASK-MIG-01 على نسخة .bak فعلية.",
+  "mappings": [
+    {
+      "target_entity": "chart_of_accounts",
+      "source_table": "PLACEHOLDER_ACCOUNTS_TABLE",
+      "fields": [
+        { "source_column": "PLACEHOLDER_CODE", "target_field": "account_code" },
+        { "source_column": "PLACEHOLDER_NAME", "target_field": "account_name" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: alqaim
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: alqaim-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/part-of: alqaim-v2
+    spec:
+      containers:
+        - name: web
+          # يُبنى محلياً من infra/docker/Dockerfile.web (Context = جذر المستودع)
+          # مثال: docker build -f infra/docker/Dockerfile.web -t alqaim/web:local .
+          image: alqaim/web:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: web-config
+            - secretRef:
+                name: web-secrets
+          # ملاحظة نطاق: apps/web لا يملك مساراً مخصصاً /health بعد (خارج
+          # حدود ملفات هذه المهمة — infra/k8s/ فقط). نستخدم "/" مؤقتاً لأن
+          # Next.js يرد عليه 200 بمجرد اكتمال الإقلاع. يُقترح فتح مهمة صغيرة
+          # منفصلة لإضافة apps/web/src/app/api/health/route.ts ثم تحديث
+          # المسارين أدناه إلى /api/health.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

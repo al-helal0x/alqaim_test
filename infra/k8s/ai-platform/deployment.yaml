@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-platform
+  namespace: alqaim
+  labels:
+    app.kubernetes.io/name: ai-platform
+    app.kubernetes.io/part-of: alqaim-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-platform
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ai-platform
+        app.kubernetes.io/part-of: alqaim-v2
+    spec:
+      containers:
+        - name: ai-platform
+          # يُبنى محلياً من infra/docker/Dockerfile.ai-platform (Context = جذر المستودع)
+          # مثال: docker build -f infra/docker/Dockerfile.ai-platform -t alqaim/ai-platform:local .
+          image: alqaim/ai-platform:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8100
+          envFrom:
+            - configMapRef:
+                name: ai-platform-config
+            - secretRef:
+                name: ai-platform-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

@@ -1,0 +1,31 @@
+[package]
+name = "alqaim-desktop"
+version = "0.1.0"
+description = "القائم — AlQaim ERP Desktop Client (Tauri wrapper over apps/web static export)"
+edition = "2021"
+rust-version = "1.77"
+
+# انظر apps/desktop/README.md: هذا التطبيق Thin Client بالكامل (القسم 6.2) —
+# لا منطق أعمال هنا إطلاقاً، فقط نافذة تعرض apps/web وتتحدث مع core-api عبر
+# fetch القياسي داخل الواجهة نفسها. لهذا لا حاجة لأي Tauri plugin إضافي
+# (fs/http/notification...) حتى الآن — capabilities/default.json يعكس هذا
+# بأدنى صلاحيات ممكنة عمداً.
+
+[lib]
+name = "alqaim_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

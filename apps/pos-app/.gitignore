@@ -1,0 +1,31 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+*.iml
+.idea/
+.vscode/
+
+# ملفات مولّدة عبر build_runner (drift/freezed/json_serializable)
+*.g.dart
+*.freezed.dart
+
+# منصات (تُضاف عند flutter create الفعلي لاحقاً)
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/app/build/
+android/build/
+android/*.iml
+ios/
+macos/
+linux/
+windows/
+web/
+
+# أسرار محلية
+.env
+*.local.json

@@ -1,0 +1,106 @@
+# known_failures.txt — TASK-CI-03 (Baseline موروث، وليس دَيناً جديداً)
+#
+# المصدر: ALQAIM_V2_MASTER_EXECUTION_PLAN.md §12 — "ruff check .، توثيق
+# الـ278 مخالفة الموروثة كـknown_failures.txt".
+#
+# ⚠️ تصحيح رقمي: العدد الفعلي المُتحقَّق منه هنا بتشغيل مباشر هو 78
+# مخالفة (core-api) — وليس 278 كما ورد في ADR-002/الخطة. 278 رقم قديم من
+# مرحلة سابقة (على الأرجح قبل عدة تنظيفات لاحقة: مهمة #17، حذف apps/mobile،
+# إلخ) لم يُحدَّث في الوثائق. هذا الملف يوثّق الرقم الفعلي الحالي، لا
+# الرقم التاريخي المتوارَث بلا تحقق.
+#
+# التوليد: cd apps/core-api && ruff check . --output-format=concise
+#          | grep -E '^\S+:[0-9]+:[0-9]+: [A-Z]+[0-9]+'
+# التاريخ: 2026-08-13
+# الغرض (TASK-CI-04 لاحقاً): أي مخالفة سطر جديد لا يظهر في هذا الملف عند
+# فحص مستقبلي = مخالفة جديدة حقيقية، تمييزها عن الموروث القديم. لا
+# تعديل/إصلاح ضمن نطاق TASK-CI-03 — توثيق فقط.
+#
+# ملخص حسب القاعدة (14 قاعدة):
+#   17 RUF002 (رمز غامض × في docstring)   14 RUF003 (نفسه في تعليق)
+#   10 RUF059 (متغير غير مستخدم في unpack)  7 FURB157 (Decimal من float)
+#    5 UP017  (datetime.UTC بدل timezone.utc) 5 E741 (اسم متغير غامض مثل l)
+#    4 UP042  (StrEnum بدل str+Enum)         4 I001 (ترتيب import)
+#    3 F811   (إعادة تعريف اسم)              3 DTZ011 (date.today بلا tz)
+#    2 F401   (import غير مستخدم)            2 B904 (raise بلا from)
+#    1 UP037  (quoted annotation قديم)       1 RUF100 (noqa غير مستخدم)
+#
+# ————————————————————————————————————————————————————————————————
+main.py:49:30: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+main.py:49:34: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+main.py:49:38: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+main.py:71:1: I001 [*] Import block is un-sorted or un-formatted
+main.py:166:1: I001 [*] Import block is un-sorted or un-formatted
+migrations/versions/platform_20260812_0003_outbox_events_add_aggregate_id.py:1:67: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+migrations/versions/platform_20260812_0003_outbox_events_add_aggregate_id.py:1:71: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+migrations/versions/platform_20260812_0003_outbox_events_add_aggregate_id.py:1:75: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:12:50: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:12:54: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:12:58: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:173:22: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:173:26: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:173:30: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:202:28: DTZ011 `datetime.date.today()` used
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:204:19: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:204:23: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:204:27: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/accounting/application/use_cases/fiscal_period_use_cases.py:305:75: E741 Ambiguous variable name: `l`
+modules/accounting/presentation/routes/fiscal_periods_router.py:69:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+modules/accounting/presentation/routes/fiscal_periods_router.py:71:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+modules/payments/application/use_cases/payments_use_cases.py:78:14: UP037 [*] Remove quotes from type annotation
+modules/purchasing/infrastructure/event_handlers.py:9:37: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/purchasing/infrastructure/event_handlers.py:9:41: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/purchasing/infrastructure/event_handlers.py:9:45: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/reporting/application/use_cases/financial_statements_use_case.py:5:55: RUF002 Docstring contains ambiguous `−` (MINUS SIGN). Did you mean `-` (HYPHEN-MINUS)?
+modules/reporting/application/use_cases/financial_statements_use_case.py:116:71: FURB157 [*] Verbose expression in `Decimal` constructor
+modules/reporting/application/use_cases/financial_statements_use_case.py:117:71: FURB157 [*] Verbose expression in `Decimal` constructor
+modules/reporting/application/use_cases/financial_statements_use_case.py:169:68: FURB157 [*] Verbose expression in `Decimal` constructor
+modules/reporting/application/use_cases/financial_statements_use_case.py:170:77: FURB157 [*] Verbose expression in `Decimal` constructor
+modules/reporting/application/use_cases/financial_statements_use_case.py:171:76: FURB157 [*] Verbose expression in `Decimal` constructor
+modules/sales/application/use_cases/sales_use_cases.py:145:98: E741 Ambiguous variable name: `l`
+modules/sales/application/use_cases/sales_use_cases.py:625:32: DTZ011 `datetime.date.today()` used
+modules/sales/application/use_cases/sales_use_cases.py:642:31: E741 Ambiguous variable name: `l`
+modules/sales/application/use_cases/sales_use_cases.py:780:28: DTZ011 `datetime.date.today()` used
+modules/sales/domain/rules/__init__.py:7:7: UP042 Class QuotationStatus inherits from both `str` and `enum.Enum`
+modules/sales/domain/rules/__init__.py:15:7: UP042 Class SalesOrderStatus inherits from both `str` and `enum.Enum`
+modules/sales/domain/rules/__init__.py:22:7: UP042 Class SalesInvoiceStatus inherits from both `str` and `enum.Enum`
+modules/sales/domain/rules/__init__.py:58:7: UP042 Class CreditNoteStatus inherits from both `str` and `enum.Enum`
+modules/sales/infrastructure/event_handlers.py:4:41: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/sales/presentation/routes/invoices_router.py:35:19: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+modules/sales/presentation/routes/invoices_router.py:35:23: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox.py:1:29: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox.py:1:33: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox.py:1:37: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_models.py:13:1: I001 [*] Import block is un-sorted or un-formatted
+platform_core/outbox_models.py:30:34: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_models.py:30:38: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_models.py:30:42: RUF003 Comment contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_worker.py:1:28: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_worker.py:1:32: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_worker.py:1:36: RUF002 Docstring contains ambiguous `×` (MULTIPLICATION SIGN). Did you mean `x` (LATIN SMALL LETTER X)?
+platform_core/outbox_worker.py:73:48: UP017 [*] Use `datetime.UTC` alias
+platform_core/outbox_worker.py:80:42: UP017 [*] Use `datetime.UTC` alias
+platform_core/outbox_worker.py:86:28: UP017 [*] Use `datetime.UTC` alias
+platform_core/outbox_worker.py:106:28: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+platform_core/security.py:30:24: UP017 [*] Use `datetime.UTC` alias
+platform_core/security.py:44:24: UP017 [*] Use `datetime.UTC` alias
+tests/integration/test_accounting_posting.py:79:14: RUF059 Unpacked variable `period` is never used
+tests/integration/test_accounting_posting.py:79:22: RUF059 Unpacked variable `cash` is never used
+tests/integration/test_accounting_posting.py:79:28: RUF059 Unpacked variable `revenue` is never used
+tests/integration/test_accounting_posting.py:102:14: RUF059 Unpacked variable `period` is never used
+tests/integration/test_accounting_posting.py:102:22: RUF059 Unpacked variable `cash` is never used
+tests/integration/test_accounting_posting.py:102:28: RUF059 Unpacked variable `revenue` is never used
+tests/integration/test_accounting_posting.py:123:22: RUF059 Unpacked variable `cash` is never used
+tests/integration/test_accounting_posting.py:123:28: RUF059 Unpacked variable `revenue` is never used
+tests/integration/test_accounting_posting.py:153:22: RUF059 Unpacked variable `cash` is never used
+tests/integration/test_accounting_posting.py:153:28: RUF059 Unpacked variable `revenue` is never used
+tests/integration/test_accounting_posting.py:173:62: FURB157 [*] Verbose expression in `Decimal` constructor
+tests/integration/test_accounting_posting.py:174:64: FURB157 [*] Verbose expression in `Decimal` constructor
+tests/integration/test_event_bus_isolation.py:14:37: F401 [*] `platform_core.event_bus.event_bus` imported but unused
+tests/integration/test_event_bus_isolation.py:19:45: F811 Redefinition of unused `event_bus` from line 14: `event_bus` redefined here
+tests/integration/test_event_bus_isolation.py:33:49: F811 Redefinition of unused `event_bus` from line 14: `event_bus` redefined here
+tests/integration/test_event_bus_isolation.py:52:61: F811 Redefinition of unused `event_bus` from line 14: `event_bus` redefined here
+tests/integration/test_period_closing.py:132:36: E741 Ambiguous variable name: `l`
+tests/integration/test_period_closing.py:133:38: E741 Ambiguous variable name: `l`
+tests/integration/test_sales_and_pos.py:57:5: F401 [*] `modules.sales.application.use_cases.sales_use_cases.InvoiceNotDraftError` imported but unused
+tests/integration/test_sales_invoice_idempotent_posting.py:17:1: I001 [*] Import block is un-sorted or un-formatted

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-api-config
+  namespace: alqaim
+  labels:
+    app.kubernetes.io/name: core-api
+    app.kubernetes.io/part-of: alqaim-v2
+data:
+  # يطابق أسماء متغيرات platform_core/config.py (البادئة ALQAIM_، القسم 8.2)
+  ALQAIM_APP_NAME: "AlQaim Core API"
+  ALQAIM_ENVIRONMENT: "production"
+  ALQAIM_OBJECT_STORAGE_ENDPOINT: "http://minio:9000"
+  ALQAIM_OBJECT_STORAGE_BUCKET: "alqaim-documents"
+  ALQAIM_DOCUMENTS_STORAGE_DIR: "var/documents"
+  ALQAIM_JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+  ALQAIM_JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
+  # عنوان ai-platform الداخلي عبر Service الخاص به (نفس namespace)
+  ALQAIM_AI_PLATFORM_BASE_URL: "http://ai-platform:8100"

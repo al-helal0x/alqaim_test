@@ -1,0 +1,104 @@
+[project]
+name = "alqaim-ai-platform"
+version = "0.1.0"
+description = "AlQaim ERP V2 — AI Platform (OCR / Invoice Understanding / Entity Matching)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "celery>=5.4",
+    "redis>=5.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.2",
+    "opencv-python-headless>=4.9",
+    "numpy>=1.26",
+    "pytesseract>=0.3.10",   # يتطلب tesseract-ocr مثبَّت على مستوى النظام (+ tesseract-ocr-ara للعربي)
+    "pillow>=10.0",
+    "rapidfuzz>=3.9",
+    "python-multipart>=0.0.9",  # لرفع الملفات عبر FastAPI UploadFile
+    # TASK-AI-05a/b (QR على الفاتورة) — إضافتان جديدتان:
+    # 1) qr-invoice-codec: حزمة Python محلية مشتركة (packages/qr_invoice_codec/،
+    #    مستقلة تماماً عن core-api/ai-platform). اسم مجرَّد بلا رقم إصدار
+    #    ولا مرجع URL هنا عمداً — **لا تكفي هذه السطر وحدها**: يجب تثبيتها
+    #    أولاً بأمر منفصل قبل "pip install -e .[dev]":
+    #        pip install -e ../../packages/qr_invoice_codec
+    #    (تماماً كأي حزمة محلية أخرى تُمرَّر كمسار سطر أوامر خام، لا كمرجع
+    #    PEP 508 داخل pyproject.toml). بعدها يراها pip كـ"Requirement already
+    #    satisfied" فوراً بلا أي حاجة لشبكة أو فهرس خاص عند تثبيت هذا المشروع.
+    #    ⚠️ لماذا لا مرجع مباشر "qr-invoice-codec @ file:../../packages/..."
+    #    هنا في dependencies؟ جُرِّب فعلياً وفشل مع pip 24.0 (الإصدار المرافق
+    #    لـ ubuntu 24.04/python 3.12 هنا، ومحتمل جداً نفس ما يشحنه
+    #    actions/setup-python الافتراضي في CI) بخطأ
+    #    "InvalidRequirement: Invalid URL given" — pip 26.x الأحدث (المُثبَّت
+    #    عبر ترقية صريحة) يتعامل معه بلا مشكلة، لكن الاعتماد على ترقية pip
+    #    ضمنية غير مضمونة عبر كل بيئات النشر/CI هشّ. الأمر المنفصل أعلاه
+    #    متوافق مع كل إصدارات pip الحديثة تقريباً — راجع Dockerfile.ai-platform
+    #    و.github/workflows/ci.yml للخطوة الفعلية المُضافة.
+    "qr-invoice-codec",
+    # 2) pyzbar: قراءة رمز QR من صورة (infrastructure/qr_reader.py) —
+    #    يتطلب مكتبة نظام libzbar0 مثبَّتة (نفس فئة اعتماد pytesseract على
+    #    tesseract-ocr أعلاه) — راجع Dockerfile.ai-platform.
+    "pyzbar>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "black>=24.0",
+    "aiosqlite>=0.20",
+    "httpx>=0.27",
+    "import-linter>=2.0",
+    # TASK-AI-04 (القسم 3.3، الخيار أ) — tests/integration/test_core_api_client.py
+    # و test_analyze_matching_integration.py يستوردان respx لمحاكاة استجابات
+    # core-api HTTP بدون خادم حقيقي. لم تُضَف هنا عند كتابة تلك الاختبارات
+    # (خارج نطاق الحزمة المعزولة وقتها) — اكتُشِف الغياب فقط عند تشغيل
+    # الاختبارات فعلياً هنا لأول مرة (ImportError: No module named 'respx').
+    "respx>=0.20",
+    # TASK-AI-05b — tests/integration/test_analyze_qr.py يولّد صورة QR
+    # حقيقية (PNG فعلي بالبايت) لاختبار PyzbarQrCodeReader end-to-end بدل
+    # الاكتفاء بحقن نص جاهز؛ لا حاجة له وقت التشغيل الفعلي (إنتاج)، اختباري
+    # فقط — لذلك في [dev] لا في dependencies الأساسية.
+    "qrcode>=7.4",
+]
+
+[tool.ruff]
+line-length = 100
+
+# نفس ضبط core-api (مهمة #4): تثبيت select/ignore صراحة بدل الاعتماد على
+# الافتراضي المتغيّر بين إصدارات ruff. عند التدقيق الفعلي هنا: 19 مخالفة،
+# منها 8 من B008 (نمط Depends() القياسي في FastAPI — راجع تعليق core-api
+# لنفس المسوّغ).
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "C4", "UP", "FURB", "RUF", "DTZ", "BLE", "ASYNC", "SIM"]
+ignore = ["B008"]
+
+# نفس نمط main.py في core-api: تسجيل Routers بعد إنشاء `app` عمدًا.
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# "../../packages/qr_invoice_codec" إضافية (TASK-AI-05a) — تسمح بتشغيل
+# "pytest" هنا مباشرة حتى لو لم يُشغَّل "pip install -e .[dev]" بعد بعد
+# إضافة اعتماد qr-invoice-codec أعلاه (نفس فلسفة pythonpath الموجودة أصلاً
+# في هذا الملف: صفر خطوة تثبيت إضافية للتطوير/الاختبار المحلي السريع).
+pythonpath = [".", "../../packages/qr_invoice_codec"]
+
+# نفس إصلاح core-api: بلا هذا "pip install -e .[dev]" يفشل بخطأ setuptools
+# "Multiple top-level packages" — راجع تعليق core-api/pyproject.toml للتفصيل.
+[tool.setuptools.packages.find]
+include = ["application*", "models*", "platform_core*", "presentation*", "shared_kernel*", "workers*", "services*"]
+
+[tool.importlinter]
+root_packages = ["application", "services", "presentation", "platform_core", "shared_kernel"]
+
+[[tool.importlinter.contracts]]
+name = "application (use_cases/ports/dto) لا يعتمد على presentation"
+type = "forbidden"
+source_modules = "application"
+forbidden_modules = ["presentation"]

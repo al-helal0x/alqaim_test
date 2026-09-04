@@ -1,0 +1,116 @@
+[project]
+name = "alqaim-core-api"
+version = "0.1.0"
+description = "AlQaim ERP V2 — Core API (Modular Monolith, FastAPI)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.2",
+    "redis>=5.0",
+    "celery>=5.4",
+    "python-jose[cryptography]>=3.3",
+    "python-multipart>=0.0.9",  # مطلوب لـ UploadFile في /products/import (القسم 9.4)
+    "passlib[bcrypt]>=1.7",
+    "bcrypt==4.0.1",  # passlib 1.7.4 غير متوافق مع bcrypt>=4.1 (كسر self-test الداخلي)
+    # httpx كان مُدرَجاً في [dev] فقط رغم استخدامه فعلياً وقت التشغيل في
+    # platform_core/ai_gateway_client.py و presentation/routes/ai_proxy_router.py
+    # (بوابة /ai/*) — أي تثبيت إنتاجي بدون [dev] كان سينكسر. نُقِل إلى هنا،
+    # ويستخدمه أيضاً modules/integrations (إرسال Webhooks) الآن.
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "black>=24.0",
+    "import-linter>=2.0",
+    "aiosqlite>=0.20",  # قاعدة بيانات الاختبارات فقط (الإنتاج Postgres حصراً)
+]
+# مُبقاة منفصلة عمداً عن dependencies الأساسية (توصية PYPROJECT_ADDITIONS.md
+# من حزمة data_migration نفسها): pyodbc يحتاج مشغّلات ODBC على مستوى نظام
+# التشغيل (msodbcsql) غير مطلوبة لصورة core-api الأساسية، وpandas/openpyxl/
+# reportlab ثقيلة نسبياً ولا يستوردها شيء حالياً على مسار الإقلاع العادي
+# (الاستيراد فعلياً كسول داخل الدوال في connectors/*.py، وexporters/*.py غير
+# مُستورَدة من أي مكان بعد — export_data.py لا يزال NotImplementedError).
+data-migration = [
+    "pandas>=2.2",
+    "openpyxl>=3.1",
+    "pyodbc>=5.1",
+    "reportlab>=4.2",
+    "arabic-reshaper>=3.0",
+    "python-bidi>=0.4",
+]
+
+[tool.ruff]
+line-length = 100
+
+# مهمة #4 (بوابة الجودة CI): كان [tool.ruff] بلا [tool.ruff.lint] صريح، فكان
+# ruff يعتمد على مجموعة القواعد الافتراضية للإصدار المثبَّت — وهي غير ثابتة بين
+# الإصدارات (هذا سبب اختلاف عدد المخالفات المُشاهَد فعليًا هنا عن رقم "278"
+# الوارد في الخطة الأصلية؛ عند التدقيق الفعلي بإصدار ruff الحالي كان الرقم 322،
+# منها 212 من قاعدة B008 وحدها). تثبيت select/ignore هنا صراحة يوقف هذا الانجراف
+# مستقبلًا (أي تغيير في القواعد المفعَّلة يظهر الآن كتغيير متعمَّد في هذا الملف
+# لا كمفاجأة عند ترقية ruff).
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "C4", "UP", "FURB", "RUF", "DTZ", "BLE", "ASYNC"]
+ignore = [
+    # B008 يُبلّغ عن `Depends(...)` كقيمة افتراضية للمعامل — هذا هو نمط FastAPI
+    # القياسي والموصى به رسميًا (طريقة حقن التبعيات الوحيدة عمليًا في هذا
+    # المستودع)، وليس خطأً. 212 من أصل 322 مخالفة فعلية كانت من هذه القاعدة
+    # فقط على أسطر Depends/Query/Body/File — "إصلاحها" يعني إعادة كتابة كل
+    # endpoint في المشروع لإزالة القيم الافتراضية، وهو تراجع حقيقي في القراءة
+    # لا تحسين. تُستثنى صراحة بدل تجاهلها سطرًا بسطر (# noqa) في مئتي موضع.
+    "B008",
+    # RUF001/002/003 يُبلّغون عن أحرف عربية (مثل "ا" اللي تشبه بصريًا حرف "l")
+    # كـ"أحرف ملتبسة" داخل الأكواد/التعليقات/docstrings. المشروع مكتوب بتعليقات
+    # وتوثيق عربي بشكل متعمَّد ومقصود كسياسة فريق. تعديل عشرات الملفات لتفادي
+    # هذا التحذير يعني إما إزالة التوثيق العربي بالكامل أو إضافة noqa بمئات
+    # المواضع — كلاهما تراجع حقيقي، لا تحسين. تُستثنى صراحة على مستوى المشروع.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+# main.py يسجّل Routers كل Module بعد إنشاء `app = FastAPI(...)` عمدًا (تعليق
+# الملف نفسه يوضّح السبب: سطر تسجيل واحد لكل وحدة لتقليل تعارض الدمج بين
+# الأعضاء) — هذا يولّد 44 مخالفة E402 لا علاقة لها بأي وحدة (modules/*) ولا
+# تدخل ضمن نطاق أي مهمة مسندة لعضو معيّن؛ تُستثنى هنا بدل نقل الاستيرادات
+# لأعلى الملف وكسر الترتيب المقصود.
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]
+
+[tool.black]
+line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# بلا هذا، "import main" داخل test_pagination_and_import_export.py يفشل عند
+# تشغيل "pytest --cov" مباشرة (بالضبط أمر CI) بدون PYTHONPATH=. يدوياً —
+# اكتُشف أثناء محاكاة أمر CI الفعلي حرفياً، وليس افتراضاً.
+pythonpath = ["."]
+
+# إصلاح: بلا هذا، "pip install -e .[dev]" يفشل فوراً بخطأ setuptools
+# "Multiple top-level packages discovered in a flat-layout" — وهو بالضبط ما
+# يشغّله CI (.github/workflows/ci.yml)، أي أن CI الفعلي لم يكن سينجح إطلاقاً
+# رغم أن كل تقارير التحقق السابقة استخدمت تثبيتاً يدوياً (pip install fastapi
+# ...) بدل الأمر الحقيقي فلم تكتشف هذا. اكتُشف ويُصلَح هنا (القسم Track C).
+[tool.setuptools.packages.find]
+include = ["modules*", "platform_core*", "shared_kernel*", "presentation*"]
+
+# فرض قواعد الاستيراد بين الطبقات والوحدات (القسم 6.4 / 11.2) — يُفشل الـ CI عند المخالفة
+[tool.importlinter]
+root_packages = ["platform_core", "shared_kernel", "modules"]
+
+[[tool.importlinter.contracts]]
+name = "Domain لا يعتمد على Infrastructure أو Presentation"
+type = "forbidden"
+source_modules = "modules.*.domain"
+forbidden_modules = ["modules.*.infrastructure", "modules.*.presentation"]

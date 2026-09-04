@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: alqaim
+resources:
+  - namespace.yaml
+  - core-api/configmap.yaml
+  - core-api/secret.yaml
+  - core-api/deployment.yaml
+  - core-api/service.yaml
+  - ai-platform/configmap.yaml
+  - ai-platform/secret.yaml
+  - ai-platform/deployment.yaml
+  - ai-platform/service.yaml
+  - web/configmap.yaml
+  - web/secret.yaml
+  - web/deployment.yaml
+  - web/service.yaml

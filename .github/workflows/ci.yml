@@ -1,0 +1,131 @@
+# TASK-CI-01 — CI Baseline (تقرير فقط، لا فشل PR)
+#
+# المصدر: ALQAIM_V2_MASTER_EXECUTION_PLAN.md §12 (TASK-CI-01..05) —
+# "`.github/workflows/ci.yml` أساسي: pytest + ruff check (تقرير فقط، لا
+# فشل PR) | SAFE PARALLEL". هذا الملف يغطي TASK-CI-01 فقط عمداً — إلزام
+# فشل PR على مخالفات جديدة (TASK-CI-05) مقفول خلف GATE-03 صراحةً في
+# الخطة، ولا يُفعَّل هنا.
+#
+# النطاق: تطبيقا Python الوحيدان في المستودع (core-api، ai-platform) —
+# كلاهما لهما pyproject.toml + [dev] extras (pytest, ruff) جاهزة فعلياً.
+# apps/web وapps/desktop (Node/TS) خارج نطاق هذا الملف — CI منفصل لهما
+# لاحقاً إن احتاج المشروع، ليس جزءاً من TASK-CI-01 كما وردت في الخطة.
+#
+# ⚠️ تقرير فقط: `continue-on-error: true` على كل خطوة تنفيذ فعلية (ruff/
+# pytest) بشكل صريح، بحيث لا يفشل الـjob ولا يحجب أي PR بغض النظر عن
+# النتيجة — بالضبط كما تنص TASK-CI-01. TASK-CI-02/03 (توثيق Baseline
+# الحالي رسمياً كملفات مرجعية) وTASK-CI-04 (إصلاح ما يمنع التشغيل فقط)
+# مهام منفصلة لاحقة، لا تُنفَّذ ضمن هذا الملف.
+#
+# --- إضافة PKG-D2 (2026-08-16) ---
+# job منفصل `pos-app-baseline` أُضيف أدناه — `dart analyze` + `flutter
+# test` لتطبيق apps/pos-app (Flutter)، بنفس منطق "تقرير فقط" حرفياً
+# (`continue-on-error: true` على كل خطوة). إضافة صرفة فقط — job
+# `python-baseline` أعلاه لم يُعدَّل بحرف واحد، ولا تعارض ملفات مع
+# PKG-C4 كما تشترط `00_TASK_PACKAGE.md §PKG-D2`.
+#
+# ⚠️ لم يُشغَّل هذا الـjob فعلياً بعد على أي CI حقيقي وقت إضافته —
+# لا بيئة Flutter SDK كانت متاحة للتحقق المحلي المسبق (راجع بطاقة
+# التسليم `تسليم_PKG-D.md`). أول تشغيل فعلي على GitHub Actions هو
+# التحقق الحقيقي الأول لهذا الـjob تحديداً — قد يحتاج تعديلاً طفيفاً
+# (مثال: إصدار Flutter محدَّد عبر `flutter-version` إن فشل `channel:
+# stable` الافتراضي).
+
+name: CI Baseline (report-only)
+
+# "on" مُقتبَس صراحة (وليس مفتاحاً حرفياً بلا اقتباس) — YAML 1.1 يفسّر
+# on/On/ON بلا اقتباس كقيمة Boolean (true)، وليس كمفتاح نصي، ما يُنتج
+# ملف workflow بلا محفِّز فعلي عند تحليله بمحلِّلات YAML الصارمة (مثال:
+# PyYAML.safe_load هنا يحوّله فعلياً لمفتاح `true` عند التحقق المحلي —
+# اكتُشف بتشغيل مباشر، وليس افتراضاً). GitHub Actions نفسه يتسامح مع هذا
+# تاريخياً، لكن الاقتباس هو الشكل الصحيح رسمياً ويُزيل الغموض كلياً.
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python-baseline:
+    name: ${{ matrix.app }} — ruff + pytest (report-only)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [core-api, ai-platform]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ⚠️ إضافة (TASK-AI-05a/b): ai-platform فقط تحتاج هذا — packages/qr_invoice_codec
+      # حزمة محلية منفصلة يعتمد عليها apps/ai-platform/pyproject.toml باسم
+      # مجرَّد "qr-invoice-codec" (بلا مرجع URL — راجع تعليق ذلك الملف للسبب
+      # الدقيق: مرجع URL نسبي فشل فعلياً مع بعض إصدارات pip). يجب تثبيتها
+      # هنا أولاً بمسار سطر أوامر خام حتى تظهر لـ"pip install -e .[dev]"
+      # التالية كـ"already satisfied" بلا أي حاجة لشبكة/فهرس (غير منشورة على
+      # PyPI أصلاً). core-api لا يعتمد عليها بعد (TASK-AI-05c مؤجَّلة).
+      - name: Install qr_invoice_codec local package (ai-platform only)
+        if: matrix.app == 'ai-platform'
+        run: pip install -e ../../packages/qr_invoice_codec
+
+      # ⚠️ إضافة (TASK-AI-05b): libzbar0 مكتبة نظام يعتمد عليها pyzbar وقت
+      # التشغيل الفعلي (infrastructure/qr_reader.py) — بلا هذا السطر يفشل
+      # TestPyzbarQrCodeReader في tests/integration/test_analyze_qr.py
+      # بـImportError عند قراءة QR فعلياً (نفس فئة اعتماد tesseract-ocr على
+      # مستوى النظام لبقية هذا الملف — لكن الأخير مثبَّت مسبقاً على runners
+      # ubuntu-latest افتراضياً، وlibzbar0 غير مضمونة كذلك).
+      - name: Install system deps (libzbar0 — ai-platform only)
+        if: matrix.app == 'ai-platform'
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libzbar0
+
+      - name: Install package + dev deps
+        run: pip install -e ".[dev]"
+
+      - name: ruff check (report-only)
+        continue-on-error: true
+        run: ruff check .
+
+      - name: pytest (report-only)
+        continue-on-error: true
+        run: pytest -v
+
+  pos-app-baseline:
+    name: pos-app (Flutter) — dart analyze + flutter test (report-only)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/pos-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'   # ← حدد رقم دقيق، مو "stable"
+          channel: stable
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # ⚠️ إضافة PKG-D2-fix (2026-08-16، عضو-5): AppDatabase (drift) في
+      # lib/data/local/app_database.dart تستورد `part 'app_database.g.dart';`
+      # وهذا الملف المولَّد غير موجود في المستودع (راجع STATUS.md §"قبل أول
+      # تشغيل فعلي"، بند 1). بدون هذه الخطوة يفشل `dart analyze` و
+      # `flutter test` حتماً بخطأ "part file not found" / أخطاء تصريف في كل
+      # ملف يستورد AppDatabase (providers.dart وملفات اختبار متعددة) — هذا
+      # فشل حقيقي أكيد في الكود، وليس بيئياً، اكتُشف بمراجعة الكود مباشرة
+      # (لا حاجة لتشغيل Flutter لإثباته: الملف غير موجود إطلاقاً في الحزمة).
+      - name: dart run build_runner build (generate drift .g.dart)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: dart analyze (report-only)
+        continue-on-error: true
+        run: dart analyze
+
+      - name: flutter test (report-only)
+        continue-on-error: true
+        run: flutter test

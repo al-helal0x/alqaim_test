@@ -1,0 +1,14 @@
+{
+  "name": "alqaim-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "القائم — AlQaim ERP Desktop Client (Tauri wrapper over apps/web)",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

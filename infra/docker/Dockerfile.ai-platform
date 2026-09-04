@@ -1,0 +1,59 @@
+FROM python:3.11-slim AS base
+WORKDIR /app
+# ⚠️ إصلاح (2026-08-17): pytesseract هو مجرد غلاف بايثون يستدعي ثنائي
+# `tesseract` على مستوى نظام التشغيل — لم يكن مثبَّتاً هنا إطلاقاً (لا يوجد
+# أي apt-get في هذا الملف)، فكان ينجح import والإقلاع، لكن أول طلب حقيقي على
+# /ai/documents/analyze يفشل بـ TesseractNotFoundError غير مُعالَجة → 500
+# (انظر تعليق pyproject.toml: "يتطلب tesseract-ocr مثبَّت على مستوى النظام").
+# tesseract-ocr-ara مطلوبة أيضاً لأن OCR يُستدعى بـ lang="ara+eng".
+# fonts-dejavu-core: يستخدمها scripts/gen_invoice_image.py (خط TrueType حقيقي
+# بدل خط PIL الافتراضي المصغَّر غير القابل للقراءة عبر OCR — انظر تعليق الإصلاح
+# في ذلك الملف نفسه، 2026-08-17).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-ara \
+        fonts-dejavu-core \
+        libzbar0 \
+    && rm -rf /var/lib/apt/lists/*
+# ⚠️ إضافة (TASK-AI-05b): libzbar0 مطلوبة لـ pyzbar (infrastructure/qr_reader.py
+# — قراءة رمز QR من صورة الفاتورة). بلا هذا السطر: `import pyzbar.pyzbar`
+# ينجح (الحزمة الثنائية Python نفسها بلا مشاكل)، لكن أول استدعاء فعلي لـ
+# `zbar_decode()` يفشل بـ `ImportError: Unable to find zbar shared library`
+# — بالضبط نفس فئة الخلل الموثَّقة أعلاه لـ pytesseract/tesseract-ocr (Python
+# wrapper يستدعي مكتبة نظام غير مضمونة الوجود تلقائياً).
+# ⚠️ إصلاح (2026-08-16، جلسة تحقّق GATE-05): الترتيب السابق كان يشغّل
+# `pip install -e .` قبل نسخ الكود الفعلي — pip الحديث (PEP 660) يبني
+# "finder" يربط كل حزمة بمكانها وقت التثبيت فقط؛ بما أن models/,
+# platform_core/, إلخ لم تكن موجودة بعد، اكتشف صفر حزم، فصار أي استيراد
+# عادي (مثل `from models import ai_models` في alembic/env.py) يفشل بـ
+# ModuleNotFoundError. `uvicorn main:app` كان يعمل رغم ذلك فقط لأن uvicorn
+# يُدخِل مجلد العمل الحالي (cwd) إلى sys.path يدوياً عند تحميل app string —
+# هذه الحيلة لا تنطبق على alembic أو أي console-script آخر.
+# الإصلاح: انسخ الكود المصدري كاملاً *قبل* pip install -e (حتى يكتشف
+# setuptools الحزم فعلياً)، + PYTHONPATH صريح كطبقة أمان إضافية.
+# ⚠️ إصلاح (2026-08-17): نفس خلل core-api بالضبط (راجع تعليق
+# Dockerfile.core-api) لم يُطبَّق هنا سابقاً — scripts/gen_invoice_image.py
+# يعيش في جذر المستودع خارج apps/ai-platform/، وسكربت نفسه يوثّق صراحة أنه
+# "يُشغَّل داخل ai-platform فقط" (يحتاج Pillow المتوفرة هنا لا في core-api)،
+# لكنه لم يكن يُنسَخ إطلاقاً → "No such file or directory" داخل الحاوية.
+COPY scripts/gen_invoice_image.py ./gen_invoice_image.py
+# ⚠️ إضافة (TASK-AI-05a/b): packages/qr_invoice_codec/ يجب أن يُنسَخ *قبل*
+# "pip install -e .[dev]" أدناه، لأن apps/ai-platform/pyproject.toml يعتمد
+# عليها كمرجع مسار محلي نسبي "qr-invoice-codec @ file:../../packages/qr_invoice_codec"
+# — تلك النسبة محسوبة من WORKDIR الحالي (/app)، فتُقرأ فعلياً من /packages/
+# qr_invoice_codec داخل هذه الحاوية (../../ من /app تصل لجذر الحاوية / ثم
+# packages/qr_invoice_codec) — يجب أن يطابق مسار COPY أدناه ذلك بالحرف، وإلا
+# "pip install -e .[dev]" يفشل بـ "No such file or directory" بالضبط مثل
+# خلل الترتيب الموثَّق أعلاه (نسخ الكود *قبل* pip install لا بعده).
+COPY packages/qr_invoice_codec/ /packages/qr_invoice_codec/
+COPY apps/ai-platform/ .
+# ⚠️ ترتيب إلزامي: قبل "-e .[dev]" — apps/ai-platform/pyproject.toml يذكر
+# "qr-invoice-codec" باسم مجرَّد فقط (بلا رقم إصدار)، يجب أن تكون مثبَّتة
+# مسبقاً وإلا "pip install -e .[dev]" يحاول جلبها من PyPI فيفشل (غير منشورة
+# هناك). راجع التعليق المطوَّل في apps/ai-platform/pyproject.toml للسبب
+# الدقيق (فشل فعلي جُرِّب مع pip 24.0 لمرجع URL مباشر داخل dependencies).
+RUN pip install --no-cache-dir -e /packages/qr_invoice_codec
+RUN pip install --no-cache-dir -e ".[dev]"
+ENV PYTHONPATH=/app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8100"]

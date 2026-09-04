@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-platform-config
+  namespace: alqaim
+  labels:
+    app.kubernetes.io/name: ai-platform
+    app.kubernetes.io/part-of: alqaim-v2
+data:
+  # يطابق أسماء متغيرات apps/ai-platform/platform_core/config.py (البادئة ALQAIM_AI_)
+  ALQAIM_AI_APP_NAME: "AlQaim AI Platform"
+  ALQAIM_AI_ENVIRONMENT: "production"
+  ALQAIM_AI_OCR_ENGINE: "tesseract"
+  ALQAIM_AI_OCR_LANGUAGES: "ara+eng"
+  ALQAIM_AI_LLM_PROVIDER: "null"
+  ALQAIM_AI_ENTITY_MATCH_AUTO_LINK_THRESHOLD: "0.92"
+  ALQAIM_AI_ENTITY_MATCH_SUGGEST_THRESHOLD: "0.55"

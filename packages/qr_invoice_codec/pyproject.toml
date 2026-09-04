@@ -1,0 +1,37 @@
+[project]
+name = "qr-invoice-codec"
+version = "0.1.0"
+description = "ترميز/فك ترميز فاتورة مُهيكَلة داخل رمز QR — حزمة Python مشتركة بين ai-platform وcore-api (TASK-AI-05a). لا تبعية على FastAPI/SQLAlchemy أو أي جزء آخر من أي تطبيق — منطق صرف قابل للاستيراد من أي مكان في المستودع."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+    # base45 (RFC 9285 — نفس المستخدَم في EU Digital COVID Certificate):
+    # أبجديته متوافقة تماماً مع نمط Alphanumeric في QR، أكفأ من Byte mode.
+    "base45>=0.4.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# ⚠️ نفس نمط apps/ai-platform وapps/core-api (layout واحد فقط هنا، لا حاجة
+# لـ[tool.setuptools.packages.find] صريح): مجلد واحد باسم يطابق اسم الحزمة
+# (qr_invoice_codec/) بجانب pyproject.toml مباشرة — setuptools يكتشفه تلقائياً
+# بلا أي غموض "multiple top-level packages" (ذلك الخطأ يظهر فقط لو كان هناك
+# أكثر من مجلد top-level قابل للالتباس مع حزمة، وهذا ليس الحال هنا).
+
+[tool.pytest.ini_options]
+# نفس حيلة apps/ai-platform وapps/core-api — يسمح بتشغيل
+# "cd packages/qr_invoice_codec && pytest" مباشرة بلا أي تثبيت مسبق.
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "C4", "UP", "FURB", "RUF", "DTZ", "BLE"]

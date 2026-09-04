@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    direction: rtl;
+  }
+
+  body {
+    @apply bg-paper text-ink font-body;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .font-display {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  ::selection {
+    @apply bg-ledger-100 text-ledger-900;
+  }
+
+  *:focus-visible {
+    outline: 2px solid theme("colors.copper.500");
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .num {
+    @apply font-mono tabular-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .kufic-rule {
+    background-image: repeating-linear-gradient(
+      90deg,
+      theme("colors.copper.500") 0 8px,
+      transparent 8px 16px
+    );
+    height: 2px;
+  }
+}

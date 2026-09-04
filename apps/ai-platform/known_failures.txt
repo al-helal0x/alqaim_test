@@ -1,0 +1,21 @@
+# known_failures.txt — TASK-CI-03 (Baseline موروث، وليس دَيناً جديداً)
+#
+# نفس الغرض والمنهجية الموثَّقة في apps/core-api/known_failures.txt —
+# راجعه للتفاصيل الكاملة (منهج التوليد، سياسة TASK-CI-04/05).
+#
+# العدد الفعلي هنا: 3 مخالفات فقط (ai-platform كود أحدث بكثير من
+# core-api، لم يتراكم عليه دَين تقني مماثل).
+#
+# التوليد: cd apps/ai-platform && ruff check . --output-format=concise
+#          | grep -E '^\S+:[0-9]+:[0-9]+: [A-Z]+[0-9]+'
+# التاريخ: 2026-08-13
+#
+# ملخص حسب القاعدة (3 قواعد):
+#   1 UP035  (استيراد من collections.abc بدل typing)
+#   1 E741   (اسم متغير غامض: l)
+#   1 RUF100 (تعليق noqa غير مستخدم فعلياً)
+#
+# ————————————————————————————————————————————————————————————————
+application/use_cases/process_document_pipeline.py:11:1: UP035 [*] Import from `collections.abc` instead: `Awaitable`, `Callable`
+application/use_cases/process_document_pipeline.py:127:25: E741 Ambiguous variable name: `l`
+application/use_cases/process_document_pipeline.py:178:35: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)

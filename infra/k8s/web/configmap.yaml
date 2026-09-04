@@ -1,0 +1,18 @@
+# ⚠️ ملاحظة مهمة: `NEXT_PUBLIC_API_URL` يُطبَخ داخل الحزمة وقت `next build`
+# (راجع apps/web/src/api-client/server-config.ts) — تعيينه هنا كمتغير بيئة
+# للـ Pod **لا يغيّر** عنوان API الذي يستخدمه العميل الفعلي، لأن الصورة
+# جاهزة مسبقاً بالقيمة التي بُنيت بها. لضبط عنوان مختلف يجب تمريره كـ
+# `--build-arg` أو `ENV` وقت `docker build` (خارج نطاق هذه المهمة —
+# `infra/docker/Dockerfile.web` غير مُعدَّل هنا). القيمة أدناه للتوثيق
+# ولخادم Node.js نفسه (متغيرات غير NEXT_PUBLIC_ تُقرأ وقت التشغيل فعلياً).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+  namespace: alqaim
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: alqaim-v2
+data:
+  NODE_ENV: "production"
+  PORT: "3000"

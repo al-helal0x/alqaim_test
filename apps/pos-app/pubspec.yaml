@@ -1,0 +1,57 @@
+name: pos_app
+description: >
+  AlQaim V2 — Mobile POS (Flutter, Offline-first).
+  تطبيق نقطة بيع مستقل تماماً (راجع Blueprint §13.3) — لا يعتمد على apps/web.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # -- شبكة / اتصال بالـ API --
+  dio: ^5.4.3
+  pretty_dio_logger: ^1.3.1
+
+  # -- تخزين محلي / Offline-first --
+  drift: ^2.16.0
+  sqlite3_flutter_libs: ^0.5.20
+  path_provider: ^2.1.3
+  path: ^1.9.0
+
+  # -- تخزين آمن لبيانات الجلسة (JWT) --
+  flutter_secure_storage: ^10.3.1
+
+  # -- حالة التطبيق --
+  flutter_riverpod: ^2.5.1
+
+  # -- مراقبة الاتصال بالشبكة (لازمة لإعادة المزامنة التلقائية) --
+  connectivity_plus: ^7.3.1
+
+  # -- أدوات عامة --
+  uuid: ^4.4.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  build_runner: ^2.4.9
+  drift_dev: ^2.16.0
+  freezed: ^3.2.5
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  # ملاحظة: لا يوجد أي أصول (assets) بعد. شاشات الواجهة (ui-kit) لم تُبنَ
+  # عمداً في هذه الجولة — راجع STATUS.md.

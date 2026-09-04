@@ -1,0 +1,13 @@
+FROM python:3.11-slim AS base
+WORKDIR /app
+# ⚠️ نفس إصلاح Dockerfile.ai-platform بالضبط (نفس الخلل الكامن، لم يظهر هنا
+# بعد فقط لأن الحاوية لم تُقلَع أصلاً بسبب تعارض منفذ 5432 — انظر تعليق
+# ai-platform للتفاصيل الكاملة).
+COPY apps/core-api/ .
+# ⚠️ إصلاح (جلسة تحقّق GATE-05): scripts/ يعيش في جذر المستودع (خارج
+# apps/core-api/)، فلم يكن يُنسَخ إطلاقاً — `python scripts/seed_demo_company.py`
+# كان يفشل بـ"No such file or directory" داخل الحاوية رغم وجوده على المضيف.
+COPY scripts/ ./scripts/
+RUN pip install --no-cache-dir -e ".[dev]"
+ENV PYTHONPATH=/app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "صلاحيات النافذة الرئيسية — حد أدنى مقصود: عرض apps/web والتفاعل معها. لا صلاحيات ملفات/شبكة Tauri إضافية لأن كل الاتصال بـ core-api يمر عبر fetch القياسي داخل الويب نفسه (القسم 6.2 Thin Client). أي صلاحية جديدة (مثال: fs لحفظ نسخة PDF محلياً) تُضاف هنا صراحة عند الحاجة الفعلية فقط.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

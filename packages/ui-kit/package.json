@@ -1,0 +1,16 @@
+{
+  "name": "@alqaim/ui-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "مكوّنات الواجهة المشتركة لتطبيقات AlQaim (Web وسطح المكتب) — مصدر وحيد للحقيقة، بلا خطوة بناء منفصلة (يُستهلَك مباشرة من المصدر عبر مسارات TypeScript في كل تطبيق مستهلِك).",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.5.0"
+  }
+}

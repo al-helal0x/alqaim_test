@@ -1,0 +1,127 @@
+# حزمة Self-Hosted كاملة (API + DB + Redis + MinIO + Web) — القسم 6.3/16
+# مهمة #3 (تصليب Self-hosted واختباره على بيئة نظيفة).
+#
+# لماذا هذا الملف مستقل بذاته (لا `include: docker-compose.yml` كما كان سابقاً):
+#   Docker Compose يدمج القوائم (ports/volumes) بالإضافة (concatenation) وليس
+#   بالاستبدال عبر عدة ملفات — أي `ports: []` هنا فوق include لِـ docker-compose.yml
+#   لن يُغلق فعلياً منافذ postgres/redis/minio المفتوحة هناك للتطوير. لذلك هذا
+#   الملف يُعرِّف كل خدمة بشكل كامل ومستقل، ليكون إغلاق المنافذ فعلياً وليس
+#   ظاهرياً فقط. (docker-compose.yml الأصلي غير مُعدَّل إطلاقاً — يبقى لبيئة
+#   التطوير المحلي كما هو).
+#
+# ما تم تصليبه هنا (مقابل بيئة التطوير):
+#   - postgres / redis / minio: بلا منافذ مكشوفة للمضيف إطلاقاً (شبكة داخلية فقط)
+#   - قاعدة بيانات مستقلة فعلية لـ ai-platform (postgres-ai) — كانت DATABASE_URL
+#     الخاصة بها تشير لـ localhost:5433 في platform_core/config.py دون أي حاوية
+#     توفّر ذلك في docker-compose.yml الأصلي، رغم وجود migrations فعلية
+#     (apps/ai-platform/migrations) تتطلبها. هذه فجوة خارج مسارات هذه المهمة
+#     (4.2) تقنياً، لكن بدونها "التشغيل الكامل على بيئة نظيفة" (معيار قبول
+#     هذه المهمة) يفشل حرفياً عند أول طلب يلمس قاعدة بيانات ai-platform —
+#     أُضيفت هنا فقط (docker-compose.yml نفسه لم يُلمَس).
+#   - كل القيم الحساسة (كلمات مرور، JWT secret) تُقرأ حصراً من متغيرات بيئة
+#     بلا قيم افتراضية آمنة وهمية — راجع `.env.selfhosted.example`
+#   - restart: unless-stopped على كل الخدمات
+#   - core-api يبني NEXT_PUBLIC_API_URL في صورة web وقت البناء (Next.js يُضمِّن
+#     متغيرات NEXT_PUBLIC_* في الحزمة وقت build لا وقت التشغيل) — بدون هذا كان
+#     المتصفح سيحاول الوصول لـ core-api عبر "localhost" من جهاز المستخدم نفسه
+#     بدل عنوان السيرفر الفعلي. عدّلنا infra/docker/Dockerfile.web لإضافة
+#     ARG/ENV مطلوبين لتمرير هذه القيمة (خارج مسارات 4.2 أيضاً، لنفس السبب:
+#     بدونه لا يعمل "تشغيل كامل" فعلياً على سيرفر بعنوان غير localhost).
+#
+# خطوات النشر الكاملة: docs/selfhosted-deploy.md
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-alqaim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?يجب ضبط POSTGRES_PASSWORD في .env.selfhosted}
+      POSTGRES_DB: ${POSTGRES_DB:-alqaim}
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    # لا منافذ مكشوفة للمضيف عمداً — الوصول من core-api عبر الشبكة الداخلية فقط
+
+  postgres-ai:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AI_POSTGRES_USER:-alqaim_ai}
+      POSTGRES_PASSWORD: ${AI_POSTGRES_PASSWORD:?يجب ضبط AI_POSTGRES_PASSWORD في .env.selfhosted}
+      POSTGRES_DB: ${AI_POSTGRES_DB:-alqaim_ai}
+    volumes: ["pgdata_ai:/var/lib/postgresql/data"]
+    # قاعدة بيانات مستقلة لـ ai-platform — راجع الشرح أعلى الملف
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # مشترك بين core-api (DB 0) وai-platform (DB 1) — بلا منفذ مكشوف للمضيف
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-alqaim}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?يجب ضبط MINIO_ROOT_PASSWORD في .env.selfhosted}
+    volumes: ["minio_data:/data"]
+    # ملاحظة: وحدة documents تستخدم حالياً تخزين قرص محلي (documents_storage_dir)
+    # لا MinIO فعلياً بعد (راجع platform_core/config.py في core-api) — الحاوية
+    # مُبقاة جاهزة للاستخدام المستقبلي دون كشف منافذها للخارج الآن.
+
+  core-api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.core-api
+    restart: unless-stopped
+    ports: ["${CORE_API_PORT:-8000}:8000"]
+    depends_on: [postgres, redis, minio]
+    environment:
+      ALQAIM_ENVIRONMENT: production
+      ALQAIM_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-alqaim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alqaim}
+      ALQAIM_REDIS_URL: redis://redis:6379/0
+      ALQAIM_JWT_SECRET_KEY: ${JWT_SECRET_KEY:?يجب ضبط JWT_SECRET_KEY في .env.selfhosted (لا تستخدم القيمة الافتراضية CHANGE_ME_IN_ENV)}
+      ALQAIM_OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      ALQAIM_AI_PLATFORM_BASE_URL: http://ai-platform:8100
+      # TASK-AI-04 (القسم 3.3، الخيار أ) — مصادقة خدمة-لخدمة لمسارات
+      # /internal/* التي يستهلكها ai-platform. القيمة من .env.selfhosted
+      # (AI_PLATFORM_SERVICE_TOKEN)، نفس القيمة بالضبط تُمرَّر أدناه لحاوية
+      # ai-platform تحت اسمها المحلي الصحيح هناك (راجع تعليق تلك الحاوية).
+      ALQAIM_AI_PLATFORM_SERVICE_TOKEN: ${AI_PLATFORM_SERVICE_TOKEN:?يجب ضبط AI_PLATFORM_SERVICE_TOKEN في .env.selfhosted}
+
+  ai-platform:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.ai-platform
+    restart: unless-stopped
+    depends_on: [redis, postgres-ai]
+    # بلا منفذ مكشوف للمضيف — core-api يعمل Proxy موثَّق أمامها (القسم 9.7)،
+    # لا داعي لكشف 8100 مباشرة للمتصفح/الشبكة العامة.
+    environment:
+      ALQAIM_AI_ENVIRONMENT: production
+      ALQAIM_AI_DATABASE_URL: postgresql+asyncpg://${AI_POSTGRES_USER:-alqaim_ai}:${AI_POSTGRES_PASSWORD}@postgres-ai:5432/${AI_POSTGRES_DB:-alqaim_ai}
+      ALQAIM_AI_REDIS_URL: redis://redis:6379/1
+      # TASK-AI-04 (القسم 3.3، الخيار أ) — عميل core-api الجديد
+      # (infrastructure/core_api_client.py). عنوان الشبكة الداخلية لحاوية
+      # core-api (اسم الخدمة docker-compose)، وليس PUBLIC_API_URL.
+      # ⚠️ اسم متغير البيئة هنا مطابق فعلياً لـSettings.env_prefix="ALQAIM_AI_"
+      # في apps/ai-platform/platform_core/config.py — أي بادئة مضاعَفة
+      # (ALQAIM_AI_ + CORE_API_BASE_URL / AI_PLATFORM_SERVICE_TOKEN)، بخلاف
+      # ما افترضه كل من عضو 1 وعضو 2 في حزمتيهما المعزولتين. تحقَّق من هذا
+      # بقراءة pydantic-settings الفعلي وقت الدمج، لا افتراضاً.
+      ALQAIM_AI_CORE_API_BASE_URL: http://core-api:8000
+      ALQAIM_AI_AI_PLATFORM_SERVICE_TOKEN: ${AI_PLATFORM_SERVICE_TOKEN:?يجب ضبط AI_PLATFORM_SERVICE_TOKEN في .env.selfhosted}
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:?يجب ضبط PUBLIC_API_URL في .env.selfhosted، مثلاً http://SERVER_IP:8000 أو https://api.example.com}"
+    restart: unless-stopped
+    ports: ["${WEB_PORT:-3000}:3000"]
+    depends_on: [core-api]
+
+volumes:
+  pgdata:
+  pgdata_ai:
+  minio_data:
